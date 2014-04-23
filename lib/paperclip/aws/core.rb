@@ -11,21 +11,6 @@ module Paperclip
           raise e
         end unless defined?(Aws)
 
-        # TODO: Covert the Log Formating 
-        # # Overriding log formatter to make sure it return a UTF-8 string
-        # if defined?(AWS::Core::LogFormatter)
-        #   AWS::Core::LogFormatter.class_eval do
-        #     def summarize_hash(hash)
-        #       hash.map { |key, value| ":#{key}=>#{summarize_value(value)}".force_encoding('UTF-8') }.sort.join(',')
-        #     end
-        #   end
-        # elsif defined?(AWS::Core::ClientLogging)
-        #   AWS::Core::ClientLogging.class_eval do
-        #     def sanitize_hash(hash)
-        #       hash.map { |key, value| "#{sanitize_value(key)}=>#{sanitize_value(value)}".force_encoding('UTF-8') }.sort.join(',')
-        #     end
-        #   end
-        # end
 
         base.instance_eval do
           @s3_options     = @options[:s3_options]     || {}
@@ -150,30 +135,15 @@ module Paperclip
               content_type: file.content_type
             }
             
-            
-            if @s3_server_side_encryption
-              write_options[:server_side_encryption] = @s3_server_side_encryption
-            end
-
-            style_specific_options = styles[style]
-
-            if style_specific_options
-              merge_s3_headers( style_specific_options[:s3_headers], @s3_headers, @s3_metadata) if style_specific_options[:s3_headers]
-              @s3_metadata.merge!(style_specific_options[:s3_metadata]) if style_specific_options[:s3_metadata]
-            end
-
-            write_options[:metadata] = @s3_metadata unless @s3_metadata.empty?
             write_options.merge!(@s3_headers)
 
-            # TODO: Change out for API Call
             
             s3_interface.put_object(write_options)
-            # s3_object(style).write(file, write_options)
           rescue ::Aws::S3::Errors::NoSuchBucket => e
             # create_bucket
             # retry
           ensure
-            # file.rewind
+            file.rewind
           end
         end
 
@@ -196,16 +166,15 @@ module Paperclip
 
       
       def copy_to_local_file(style, local_dest_path)
-      # TODO: This whole function
       
-      #   log("copying #{path(style)} to local file #{local_dest_path}")
-      #   local_file = ::File.open(local_dest_path, 'wb')
-      #   file = s3_object(style)
-      #   local_file.write(file.read)
-      #   local_file.close
-      # rescue AWS::Errors::Base => e
-      #   warn("#{e} - cannot copy #{path(style)} to local file #{local_dest_path}")
-      #   false
+        log("copying #{path(style)} to local file #{local_dest_path}")
+        local_file = ::File.open(local_dest_path, 'wb')
+        file = s3_interface.get_object(bucket: bucket_name, key: path(style))
+        local_file.write(file.body)
+        local_file.close
+      rescue AWS::Errors::Base => e
+        warn("#{e} - cannot copy #{path(style)} to local file #{local_dest_path}")
+        false
       end
 
       private
