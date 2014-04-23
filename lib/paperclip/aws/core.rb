@@ -123,10 +123,7 @@ module Paperclip
         @queued_for_write.each do |style, file|
           begin
             log("saving #{path(style)}")
-            acl = @s3_permissions[style] || @s3_permissions[:default]
-            acl = acl.call(self, style) if acl.respond_to?(:call)
-            
-            
+
             write_options = {
               bucket: bucket_name, 
               key: path(style), 
@@ -134,8 +131,6 @@ module Paperclip
               body: File.read(file.path), 
               content_type: file.content_type
             }
-            
-            write_options.merge!(@s3_headers)
 
             
             s3_interface.put_object(write_options)
@@ -170,7 +165,8 @@ module Paperclip
         log("copying #{path(style)} to local file #{local_dest_path}")
         local_file = ::File.open(local_dest_path, 'wb')
         file = s3_interface.get_object(bucket: bucket_name, key: path(style))
-        local_file.write(file.body)
+        file.body.pos = 0 
+        local_file.write(file.body.read)
         local_file.close
       rescue AWS::Errors::Base => e
         warn("#{e} - cannot copy #{path(style)} to local file #{local_dest_path}")
