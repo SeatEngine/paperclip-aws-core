@@ -103,7 +103,7 @@ module Paperclip
         else
           false
         end
-      rescue Aws::S3::Errors::NoSuchKey => e
+      rescue => e
         false
       end
 
@@ -134,7 +134,8 @@ module Paperclip
 
             
             s3_interface.put_object(write_options)
-          rescue ::Aws::S3::Errors::NoSuchBucket => e
+          rescue => e
+            log("Error: #{e.inspect}")
             # create_bucket
             # retry
           ensure
