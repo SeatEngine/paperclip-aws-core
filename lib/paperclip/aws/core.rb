@@ -92,7 +92,16 @@ module Paperclip
 
       def obtain_s3_instance_for(options)
         instances = (Thread.current[:paperclip_s3_instances] ||= {})
-        instances[options] ||= ::Aws::S3.new()
+        instances[options] ||= ::Aws::S3.new(endpoint: s3_endpoint)
+      end
+      
+      def s3_endpoint
+        case Aws.config[:region]
+          when 'us-east-01'
+            's3.amazonaws.com'
+          else
+            "s3-#{Aws.config[:region]}.amazonaws.com"
+        end
       end
 
 
