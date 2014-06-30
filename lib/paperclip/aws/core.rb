@@ -14,6 +14,9 @@ module Paperclip
 
         base.instance_eval do
           @s3_options     = @options[:s3_options]     || {}
+        
+          @s3_endpoint    = @options[:s3_endpoint]
+
 
           @s3_protocol    = @options[:s3_protocol]    ||
             Proc.new do |style, attachment|
@@ -92,16 +95,11 @@ module Paperclip
 
       def obtain_s3_instance_for(options)
         instances = (Thread.current[:paperclip_s3_instances] ||= {})
-        instances[options] ||= ::Aws::S3.new(endpoint: s3_endpoint)
+        instances[options] ||= s3_endpoint.present? ? ::Aws::S3.new(endpoint: s3_endpoint) : ::Aws::S3.new(endpoint: s3_endpoint)
       end
       
       def s3_endpoint
-        case Aws.config[:region]
-          when 'us-east-01'
-            's3.amazonaws.com'
-          else
-            "s3-#{Aws.config[:region]}.amazonaws.com"
-        end
+        @s3_endpoint
       end
 
 
