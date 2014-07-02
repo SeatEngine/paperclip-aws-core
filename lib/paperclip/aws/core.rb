@@ -16,7 +16,14 @@ module Paperclip
           @s3_options     = @options[:s3_options]     || {}
         
           @s3_endpoint    = @options[:s3_endpoint]
-
+          
+          if @options[:credentials].present?
+            credentials = @options[:credentials].symbolize_keys
+            ::Aws::config[:credentials] = ::Aws::Credentials.new(credentials[:access_key_id], credentials[:secret_access_key])
+            ::Aws.config[:region] = credentials[:region]
+          end
+            
+          @aws_credentials = @options[:credentials]   || {}
 
           @s3_protocol    = @options[:s3_protocol]    ||
             Proc.new do |style, attachment|
@@ -95,7 +102,7 @@ module Paperclip
 
       def obtain_s3_instance_for(options)
         instances = (Thread.current[:paperclip_s3_instances] ||= {})
-        instances[options] ||= s3_endpoint.present? ? ::Aws::S3.new(endpoint: s3_endpoint) : ::Aws::S3.new(endpoint: s3_endpoint)
+        instances[options] ||= s3_endpoint.present? ? ::Aws::S3.new(endpoint: s3_endpoint) : ::Aws.s3
       end
       
       def s3_endpoint
