@@ -14,15 +14,16 @@ module Paperclip
 
         base.instance_eval do
           @s3_options     = @options[:s3_options]     || {}
-        
-          @s3_endpoint    = @options[:s3_endpoint]
-          
+
+          @s3_endpoint    = @options[:s3_endpoint].starts_with?('http') ? @options[:s3_endpoint] : "https://#{@options[:s3_endpoint]}"
+
+
           if @options[:credentials].present?
             credentials = @options[:credentials].symbolize_keys
             ::Aws::config[:credentials] = ::Aws::Credentials.new(credentials[:access_key_id], credentials[:secret_access_key])
             ::Aws.config[:region] = credentials[:region]
           end
-            
+
           @aws_credentials = @options[:credentials]   || {}
 
           @s3_protocol    = @options[:s3_protocol]    ||
@@ -71,7 +72,7 @@ module Paperclip
       def s3_host_name
         host_name = @options[:s3_host_name] ||  "s3.amazonaws.com"
         # host_name = host_name.call(self) if host_name.is_a?(Proc)
-        # 
+        #
         # host_name || s3_credentials[:s3_host_name] || "s3.amazonaws.com"
       end
 
@@ -102,9 +103,9 @@ module Paperclip
 
       def obtain_s3_instance_for(options)
         instances = (Thread.current[:paperclip_s3_instances] ||= {})
-        instances[options] ||= s3_endpoint.present? ? ::Aws::S3.new(endpoint: s3_endpoint) : ::Aws.s3
+        instances[options] ||= s3_endpoint.present? ? ::Aws::S3::Client.new(endpoint: s3_endpoint) : ::Aws.s3
       end
-      
+
       def s3_endpoint
         @s3_endpoint
       end
@@ -139,14 +140,14 @@ module Paperclip
             log("saving #{path(style)}")
 
             write_options = {
-              bucket: bucket_name, 
-              key: path(style), 
-              acl: 'public-read', 
-              body: File.read(file.path), 
+              bucket: bucket_name,
+              key: path(style),
+              acl: 'public-read',
+              body: File.read(file.path),
               content_type: file.content_type
             }
 
-            
+
             s3_interface.put_object(write_options)
           rescue => e
             log("Error: #{e.inspect}")
@@ -174,13 +175,13 @@ module Paperclip
         @queued_for_delete = []
       end
 
-      
+
       def copy_to_local_file(style, local_dest_path)
-      
+
         log("copying #{path(style)} to local file #{local_dest_path}")
         local_file = ::File.open(local_dest_path, 'wb')
         file = s3_interface.get_object(bucket: bucket_name, key: path(style))
-        file.body.pos = 0 
+        file.body.pos = 0
         local_file.write(file.body.read)
         local_file.close
       rescue AWS::Errors::Base => e
