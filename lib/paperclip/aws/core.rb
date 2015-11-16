@@ -137,14 +137,16 @@ module Paperclip
       def flush_writes #:nodoc:
         @queued_for_write.each do |style, file|
           begin
-            log("saving #{path(style)}")
+            content_type = Rack::Mime.mime_type(file.path.split('.').last)
+
+
 
             write_options = {
               bucket: bucket_name,
               key: path(style),
               acl: 'public-read',
               body: File.read(file.path),
-              content_type: file.content_type
+              content_type: content_type
             }
 
 
@@ -173,6 +175,10 @@ module Paperclip
           end
         end
         @queued_for_delete = []
+      end
+
+      def get_content_type(file)
+
       end
 
 
